@@ -1,6 +1,6 @@
 # 人工测试 01：多人 TDM 加载、感知与记忆
 
-这份测试现在需要人工执行。优先完成 A 组，约 5 分钟；A 组通过后再做 B 组，约 10–15 分钟。C 组可以随后补测。测试对象是观察模块，本轮不评价枪法、走位或“像不像真人”。
+这份测试需要游戏内人工观察，可以按你的时间安排延期；未执行项始终保留 `not_run`。有空后优先完成 A 组，约 5 分钟；A 组通过后再做 B 组，约 10–15 分钟。C/D 组可以随后补测。测试对象是观察模块，本轮不评价枪法、走位或“像不像真人”。
 
 ## 准备
 
@@ -30,6 +30,7 @@
 | --- | --- |
 | `probe loaded; waiting for match state` | 已进入探针初始化；不能单凭此行认定感知可用 |
 | `memory selftest passed=55 failed=0` | 游戏引擎实际执行了当前 55 条原生断言；同时记录 `first_failure` |
+| `decision selftest passed=126 failed=0` | 含决策模块的新包实际执行了 126 条决策断言；旧包没有这行 |
 | `TDM observer active; behavior_control=0 memory=1` | 模式检查与自测通过，记忆观察已开启 |
 | `unsupported: mode=... team=... players=...` | 未进入白名单；把原文反馈回来，不改源码强行放行 |
 | `match state timeout` | 等待约 30 秒仍缺少对局状态，观察停止 |
@@ -47,7 +48,7 @@
 
 | 编号 | 操作 | 通过标准 | 需要反馈 |
 | --- | --- | --- | --- |
-| A1 | 使用人工测试包进入 TDM 地图，观察开局提示 | 看到自测 `passed=55 failed=0`，随后 `behavior_control=0 memory=1`，无脚本错误／崩溃 | 提示原文或视频；若失败，给出 `first_failure` |
+| A1 | 使用人工测试包进入 TDM 地图，观察开局提示 | 看到记忆自测 `passed=55 failed=0`；含决策模块的新包另需 `decision selftest passed=126 failed=0`；随后 `behavior_control=0 memory=1`，无脚本错误／崩溃 | 提示原文或视频；若失败，给出 `first_failure`；注明测试包版本 |
 | A2 | 你与唯一人机分到敌方，存活后等待约 10 秒 | 焦点对应 `bot#1 human#1`；不持续卡在 `missing_player`、`same_team` 或 `observer_pending` | 你与人机是否敌对、实际人数、焦点提示 |
 | A3 | 在安全的遮挡处待约 30 秒 | 游戏可继续操作，无持续报错／明显新卡顿 | 是否崩溃、报错或提示刷屏；帧率仅作观察，不判定性能达标 |
 
@@ -79,6 +80,18 @@ B2 只有在持续 rejected、目标保持存活且没有重新暴露的情况�
 
 换队、加入／离开和超过 12 连接的拒绝测试后续单独补测；本次未实际执行的项目始终保留 `not_run`。C1 验证的是**观察者**生命周期，不代表已实现目标死亡后的所有决策语义。
 
+## D 组：新版决策观察（可延期）
+
+仅在确认安装的构建包含决策模块后执行。你暂时没有时间时不必现在测试，也不要拿旧包缺少 plan 输出判定失败。
+
+| 编号 | 操作 | 通过标准 | 需要反馈 |
+| --- | --- | --- | --- |
+| D1 | 做 B1 的持续可见场景 | 决策原生自测全部通过；最终有 `state=tracking kind=observe focused=1` | 决策自测与 plan 输出；每秒诊断可能漏掉短暂 reacting，不能据此验证 250 毫秒精度 |
+| D2 | D1 后做 B2，保持存活、持续遮挡且样本为 rejected | 出现 `searching kind=search focused=1`，预算下降，随后 idle；同时最后目击坐标不追随墙后移动 | 包含 sample、memory、plan 的连续片段；中途重新暴露则重试 |
+| D3 | 搜索中重新暴露，再次确认后再遮挡；另试观察者死亡重生 | 可以再次确认／搜索；观察者新生命周期不沿用上一次确认与预算 | 新一轮 plan 提示；不能稳定控制时记 not_run |
+
+这组不检验人机是否真的走向记忆位置：动作尚未接入。记录多个目标或 `focused=0` 时，不能把所选真人的记忆行当作意图目标。
+
 ## 发回这份结果
 
 复制下面内容填好即可，不必写长报告。`pass` 只填实际看见了通过标准的项；`fail` 表示观察到不符合标准；未测、条件不满足和无法判断均为 `not_run`，在备注说明原因。
@@ -92,9 +105,11 @@ B2 只有在持续 rejected、目标保持存活且没有重新暴露的情况�
 构建类型：manual-test / observer / 不确定
 是否曾手动设置 HBOT 变量（没有即可写“没有”）：
 自测原文（passed / failed / first_failure）：
+决策自测原文（旧包写“不适用”）：
 A1=not_run  A2=not_run  A3=not_run
 B1=not_run  B2=not_run  B3=not_run  B4=not_run
 C1=not_run  C2=not_run  C3=not_run  C4=not_run
+D1=not_run  D2=not_run  D3=not_run
 第一个问题发生在哪一步：
 预期 / 实际看到的提示：
 是否重新暴露、死亡或焦点变化：

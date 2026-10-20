@@ -51,6 +51,12 @@ function report_focus( players, bot_ordinal, human_ordinal, now_ms )
         return;
     }
     target_id = target getentitynumber();
+    if ( isdefined( record.intent ) )
+    {
+        intent = record.intent;
+        focused = isdefined( intent.target_id ) && intent.target_id == target_id;
+        iprintln( "[HBOT plan] state=" + intent.state + " kind=" + intent.kind + " focused=" + focused + " reaction_ms=" + intent.reaction_remaining_ms + " search_ms=" + intent.search_remaining_ms );
+    }
     sample = record.last_samples[ target_id ];
     if ( isdefined( sample ) )
     {

@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"name":"reaction-needs-confirmation", "steps":[
+      {"op":"step","now_ms":0,"expect":{"state":"idle","kind":"none","id":null,"position":null}},
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[10,20,0]}],"expect":{"state":"reacting","kind":"wait","id":1,"position":null,"reaction_remaining_ms":250}},
+      {"op":"step","now_ms":249,"expect":{"state":"reacting","reaction_remaining_ms":1,"position":null}},
+      {"op":"step","now_ms":250,"expect":{"state":"reacting","reaction_remaining_ms":0,"position":null}},
+      {"op":"step","now_ms":500,"expect":{"state":"reacting","kind":"wait"}},
+      {"op":"step","now_ms":600,"samples":[{"id":1,"visible":true,"position":[15,20,0]}],"expect":{"state":"tracking","kind":"observe","position":[15,20,0]}}
+    ]},
+    {"name":"brief-glimpse-cancels", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":100,"samples":[{"id":1,"visible":false}],"expect":{"state":"idle","kind":"none","id":null}},
+      {"op":"step","now_ms":1000,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250}},
+      {"op":"step","now_ms":1250,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"tracking","position":[3,0,0]}}
+    ]},
+    {"name":"hidden-search-is-bounded", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,2,3]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[4,5,6]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":300,"samples":[{"id":1,"visible":false}],"expect":{"state":"searching","kind":"search","position":[4,5,6],"search_remaining_ms":3000}},
+      {"op":"step","now_ms":1000,"world_position":[999,888,777],"expect":{"state":"searching","position":[4,5,6],"search_remaining_ms":2300}},
+      {"op":"step","now_ms":3299,"expect":{"state":"searching","search_remaining_ms":1}},
+      {"op":"step","now_ms":3300,"expect":{"state":"idle","id":null,"position":null,"search_remaining_ms":0}}
+    ]},
+    {"name":"memory-expiry-limits-search", "ttl_ms":500, "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":400,"samples":[{"id":1,"visible":false}],"expect":{"state":"searching","search_remaining_ms":350}},
+      {"op":"step","now_ms":750,"expect":{"state":"idle","position":null}}
+    ]},
+    {"name":"reacquisition-restarts-reaction", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":300,"samples":[{"id":1,"visible":false}],"expect":{"state":"searching"}},
+      {"op":"step","now_ms":400,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","position":null,"reaction_remaining_ms":250}},
+      {"op":"step","now_ms":649,"samples":[{"id":1,"visible":true,"position":[4,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":1}},
+      {"op":"step","now_ms":650,"samples":[{"id":1,"visible":true,"position":[5,0,0]}],"expect":{"state":"tracking","position":[5,0,0]}}
+    ]},
+    {"name":"stale-sensors-cannot-track-forever", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":2249,"expect":{"state":"tracking","position":[2,0,0]}},
+      {"op":"step","now_ms":2250,"expect":{"state":"searching","search_remaining_ms":2000}},
+      {"op":"step","now_ms":2300,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250}}
+    ]},
+    {"name":"sticky-focus-and-deterministic-ties", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":2,"visible":true,"position":[2,0,0]},{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting","id":1}},
+      {"op":"step","now_ms":100,"samples":[{"id":2,"visible":true,"position":[22,0,0]}],"expect":{"state":"reacting","id":1}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[11,0,0]}],"expect":{"state":"tracking","id":1}},
+      {"op":"step","now_ms":300,"samples":[{"id":2,"visible":true,"position":[23,0,0]}],"expect":{"state":"tracking","id":1,"position":[11,0,0]}},
+      {"op":"step","now_ms":350,"samples":[{"id":1,"visible":false},{"id":2,"visible":true,"position":[24,0,0]}],"expect":{"state":"reacting","id":2,"reaction_remaining_ms":250}},
+      {"op":"step","now_ms":600,"samples":[{"id":2,"visible":true,"position":[25,0,0]}],"expect":{"state":"tracking","id":2,"position":[25,0,0]}}
+    ]},
+    {"name":"memory-alone-cannot-acquire", "steps":[
+      {"op":"seed","now_ms":0,"id":5,"position":[5,0,0]},
+      {"op":"step","now_ms":0,"expect":{"state":"idle","id":null}},
+      {"op":"step","now_ms":100,"samples":[{"id":5,"visible":true,"record":false}],"expect":{"state":"idle","id":null}},
+      {"op":"step","now_ms":200,"samples":[{"id":5,"visible":true,"position":[6,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":450,"samples":[{"id":5,"visible":false}],"expect":{"state":"idle","position":null}}
+    ]},
+    {"name":"observer-reset-clears-planning", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"reset"},
+      {"op":"step","now_ms":300,"world_position":[900,900,900],"expect":{"state":"idle","id":null}},
+      {"op":"step","now_ms":500,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250}}
+    ]},
+    {"name":"clock-rewind-discards-focus", "steps":[
+      {"op":"step","now_ms":1000,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":1250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":1000,"expect":{"state":"idle","id":null}},
+      {"op":"step","now_ms":1100,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250}}
+    ]},
+    {"name":"negative-clock-clears-state", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":-1,"expect":{"state":"idle","id":null}},
+      {"op":"step","now_ms":100,"expect":{"state":"idle","position":null}}
+    ]},
+    {"name":"stale-evidence-is-ignored", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"at_ms":0,"record":false}],"expect":{"state":"reacting","reaction_remaining_ms":0}},
+      {"op":"step","now_ms":300,"samples":[{"id":1,"visible":false,"at_ms":0}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":350,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking","position":[2,0,0]}},
+      {"op":"step","now_ms":400,"samples":[{"id":1,"visible":false,"at_ms":300}],"expect":{"state":"tracking","position":[2,0,0]}}
+    ]},
+    {"name":"positive-on-stale-boundary-restarts", "steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":2250,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250,"position":null}}
+    ]},
+    {"name":"positive-on-memory-expiry-restarts", "ttl_ms":500,"steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting"}},
+      {"op":"step","now_ms":250,"samples":[{"id":1,"visible":true,"position":[2,0,0]}],"expect":{"state":"tracking"}},
+      {"op":"step","now_ms":750,"samples":[{"id":1,"visible":true,"position":[3,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250,"position":null}}
+    ]},
+    {"name":"invalid-configuration-uses-bounds", "reaction_ms":0,"search_ms":99999,"stale_ms":0,"steps":[
+      {"op":"step","now_ms":0,"samples":[{"id":1,"visible":true,"position":[1,0,0]}],"expect":{"state":"reacting","reaction_remaining_ms":250}}
+    ]}
+  ]
+}
