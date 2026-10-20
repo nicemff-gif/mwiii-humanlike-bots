@@ -70,7 +70,7 @@ function clear_on_death( record )
     record.active = 0;
 }
 
-function scan_observer( observer, players, now_ms )
+function scan_observer( observer, players, now_ms, diagnostics_enabled )
 {
     key = observer getentitynumber();
     record = level.hbot_shadow_records[ key ];
@@ -81,6 +81,7 @@ function scan_observer( observer, players, now_ms )
         record.team = observer.team;
         record.active = 1;
         record.cursor = 0;
+        record.last_samples = [];
         record.memory = hbot_memory::create_memory( 4000, 16 );
         level.hbot_shadow_records[ key ] = record;
         observer notify( "hbot_shadow_life" );
@@ -102,6 +103,17 @@ function scan_observer( observer, players, now_ms )
         }
         samples++;
         observation = sample_visible( observer, candidate );
+        if ( diagnostics_enabled )
+        {
+            sample = spawnstruct();
+            sample.at_ms = now_ms;
+            sample.result = "rejected";
+            if ( isdefined( observation ) )
+            {
+                sample.result = "visible";
+            }
+            record.last_samples[ candidate getentitynumber() ] = sample;
+        }
         if ( isdefined( observation ) )
         {
             hbot_memory::record_visible( record.memory, observation.target_id, observation.position, now_ms );

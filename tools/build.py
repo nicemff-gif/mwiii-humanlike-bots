@@ -39,11 +39,13 @@ def validate_inspection(text: str) -> None:
         r"#namespace hbot_mode;",
         r"#namespace hbot_perception;",
         r"#namespace hbot_contracts;",
+        r"#namespace hbot_diagnostics;",
         r"hbot_mode::supports_tdm\(",
         r"hbot_memory::record_visible\(",
         r'getdvarint\( @"hbot_memory_enabled", 0 \)',
         r'getdvarint\( @"hbot_memory_selftest", 0 \)',
         r'getdvarint\( @"hbot_probe_enabled", 0 \)',
+        r'getdvarint\( @"hbot_debug_enabled", 0 \)',
         r'level endon\( "game_ended" \)',
         r"// dev strs \.\. 0\s",
     ]
@@ -87,6 +89,12 @@ def validate_memory_source(source: str) -> None:
         raise ValueError("Memory domain must not read runtime entities or engine state")
 
 
+def validate_diagnostics_source(source: str) -> None:
+    code = re.sub(r"//[^\n]*", "", source)
+    if re.search(r"\b(?:origin|geteye|getplayerangles|sighttracepassed|sample_visible|record_visible)\b", code):
+        raise ValueError("Diagnostics must not read world positions, resample, or write observations")
+
+
 def git_value(*arguments: str) -> str:
     return subprocess.check_output(
         ["git", *arguments], cwd=ROOT, text=True, encoding="utf-8",
@@ -103,6 +111,7 @@ def build(executable: Path) -> dict:
         generated_source = generate_file(ROOT, generated)
         sources = sorted((ROOT / SOURCE_DIRECTORY).glob("*.gsc"))
         validate_memory_source((ROOT / SOURCE_DIRECTORY / "memory.gsc").read_text(encoding="utf-8"))
+        validate_diagnostics_source((ROOT / SOURCE_DIRECTORY / "diagnostics.gsc").read_text(encoding="utf-8"))
         first = stage / "first" / "hbot_probe"
         second = stage / "second" / "hbot_probe"
         logs = compile_once(executable, first, generated) + compile_once(executable, second, generated)
