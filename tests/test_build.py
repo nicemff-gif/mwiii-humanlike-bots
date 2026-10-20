@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from tools.build import MAGIC, validate_gsc, validate_inspection
+from tools.build import MAGIC, validate_gsc, validate_inspection, validate_memory_source
 
 
 class GscArtifactBoundaryTests(unittest.TestCase):
@@ -32,8 +32,11 @@ class GscArtifactBoundaryTests(unittest.TestCase):
 class ProbeInspectionTests(unittest.TestCase):
     def baseline(self):
         return (
-            "#namespace hbot_probe;\nfunction autoexec __init__system__()\n"
+            "#namespace hbot_probe;\n// Namespace hbot_probe / hbot_probe\nfunction autoexec __init__system__()\n"
             "function observe_match()\ngetdvarint( @\"hbot_probe_enabled\", 0 )\n"
+            "#namespace hbot_memory;\n#namespace hbot_mode;\n#namespace hbot_perception;\n#namespace hbot_contracts;\n"
+            "hbot_mode::supports_tdm(\nhbot_memory::record_visible(\n"
+            "getdvarint( @\"hbot_memory_enabled\", 0 )\ngetdvarint( @\"hbot_memory_selftest\", 0 )\n"
             "level endon( \"game_ended\" );\n// dev strs .. 0   (offset: 0x100)\n"
         )
 
@@ -49,6 +52,12 @@ class ProbeInspectionTests(unittest.TestCase):
 
     def test_observer_contract_passes(self):
         validate_inspection(self.baseline())
+
+    def test_memory_domain_cannot_read_engine_state(self):
+        for read in ["level.players", "self.origin", "gettime()", "sighttracepassed(a,b,0,c)"]:
+            with self.subTest(read=read), self.assertRaises(ValueError):
+                validate_memory_source(read)
+        validate_memory_source("// level state is intentionally absent\n contact = spawnstruct();")
 
 
 if __name__ == "__main__":

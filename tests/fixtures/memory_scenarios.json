@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "mode_cases": [
+    {"mode": "war", "teambased": true, "count": 1, "allowed": true},
+    {"mode": "war", "teambased": true, "count": 12, "allowed": true},
+    {"mode": "war", "teambased": false, "count": 12, "allowed": false},
+    {"mode": "war", "teambased": null, "count": 12, "allowed": false},
+    {"mode": "war", "teambased": true, "count": 0, "allowed": false},
+    {"mode": "war", "teambased": true, "count": 13, "allowed": false},
+    {"mode": null, "teambased": true, "count": 12, "allowed": false},
+    {"mode": "tdm", "teambased": true, "count": 12, "allowed": false},
+    {"mode": "dom", "teambased": true, "count": 12, "allowed": false},
+    {"mode": "koth", "teambased": true, "count": 12, "allowed": false},
+    {"mode": "sd", "teambased": true, "count": 12, "allowed": false},
+    {"mode": "br", "teambased": true, "count": 12, "allowed": false}
+  ],
+  "cases": [
+    {
+      "name": "never-seen-is-unknown", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "hidden", "now_ms": 0, "world_position": [900, 0, 0]},
+        {"op": "expect", "id": 1, "now_ms": 0, "contact": null}
+      ]
+    },
+    {
+      "name": "hidden-motion-does-not-refresh-memory", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [10, 20, 0], "now_ms": 0},
+        {"op": "expect", "id": 1, "now_ms": 0, "contact": {"position": [10, 20, 0], "seen_at": 0, "confidence": 1}},
+        {"op": "hidden", "now_ms": 1000, "world_position": [999, 999, 0]},
+        {"op": "expect", "id": 1, "now_ms": 1000, "contact": {"position": [10, 20, 0], "seen_at": 0, "confidence": 0.75}},
+        {"op": "expect", "id": 1, "now_ms": 4000, "contact": null}
+      ]
+    },
+    {
+      "name": "visible-refresh-updates-position-and-expiry", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [10, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 1, "position": [20, 0, 0], "now_ms": 2000},
+        {"op": "expect", "id": 1, "now_ms": 3000, "contact": {"position": [20, 0, 0], "seen_at": 2000, "confidence": 0.75}},
+        {"op": "expect", "id": 1, "now_ms": 6000, "contact": null}
+      ]
+    },
+    {
+      "name": "targets-have-independent-memories", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [10, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 2, "position": [20, 0, 0], "now_ms": 500},
+        {"op": "expect", "id": 1, "now_ms": 1000, "contact": {"position": [10, 0, 0], "seen_at": 0, "confidence": 0.75}},
+        {"op": "expect", "id": 2, "now_ms": 1000, "contact": {"position": [20, 0, 0], "seen_at": 500, "confidence": 0.875}}
+      ]
+    },
+    {
+      "name": "capacity-evicts-oldest-sighting", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [1, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 2, "position": [2, 0, 0], "now_ms": 1},
+        {"op": "see", "id": 3, "position": [3, 0, 0], "now_ms": 2},
+        {"op": "expect", "id": 1, "now_ms": 2, "contact": null},
+        {"op": "expect", "id": 3, "now_ms": 2, "contact": {"position": [3, 0, 0], "seen_at": 2, "confidence": 1}}
+      ]
+    },
+    {
+      "name": "refresh-protects-against-oldest-eviction", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [1, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 2, "position": [2, 0, 0], "now_ms": 1},
+        {"op": "see", "id": 1, "position": [10, 0, 0], "now_ms": 2},
+        {"op": "see", "id": 3, "position": [3, 0, 0], "now_ms": 3},
+        {"op": "expect", "id": 2, "now_ms": 3, "contact": null}
+      ]
+    },
+    {
+      "name": "clock-rewind-clears-memory", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [10, 0, 0], "now_ms": 1000},
+        {"op": "expect", "id": 1, "now_ms": 900, "contact": null},
+        {"op": "see", "id": 1, "position": [20, 0, 0], "now_ms": 950},
+        {"op": "expect", "id": 1, "now_ms": 950, "contact": {"position": [20, 0, 0], "seen_at": 950, "confidence": 1}}
+      ]
+    },
+    {
+      "name": "death-or-round-reset-clears-all", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [1, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 2, "position": [2, 0, 0], "now_ms": 0},
+        {"op": "reset"},
+        {"op": "expect", "id": 1, "now_ms": 1, "contact": null},
+        {"op": "expect", "id": 2, "now_ms": 1, "contact": null}
+      ]
+    },
+    {
+      "name": "invalid-target-is-not-recorded", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": -1, "position": [10, 0, 0], "now_ms": 0, "accepted": false},
+        {"op": "expect", "id": -1, "now_ms": 0, "contact": null},
+        {"op": "see", "id": 2048, "position": [10, 0, 0], "now_ms": 0, "accepted": false}
+      ]
+    },
+    {
+      "name": "missing-visible-position-is-rejected", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": null, "now_ms": 0, "accepted": false},
+        {"op": "expect", "id": 1, "now_ms": 0, "contact": null}
+      ]
+    },
+    {
+      "name": "negative-clock-is-fail-closed", "ttl_ms": 4000, "capacity": 2,
+      "steps": [
+        {"op": "see", "id": 1, "position": [10, 0, 0], "now_ms": 10},
+        {"op": "expect", "id": 1, "now_ms": -1, "contact": null},
+        {"op": "expect", "id": 1, "now_ms": 11, "contact": null}
+      ]
+    },
+    {
+      "name": "expired-slots-can-be-reused", "ttl_ms": 1000, "capacity": 1,
+      "steps": [
+        {"op": "see", "id": 1, "position": [1, 0, 0], "now_ms": 0},
+        {"op": "see", "id": 2, "position": [2, 0, 0], "now_ms": 1000},
+        {"op": "expect", "id": 1, "now_ms": 1000, "contact": null},
+        {"op": "expect", "id": 2, "now_ms": 1000, "contact": {"position": [2, 0, 0], "seen_at": 1000, "confidence": 1}}
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 """Compile original GSC twice, inspect it, and write a provenance manifest."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -9,10 +10,11 @@ import subprocess
 import tempfile
 
 from tools.toolchain import ROOT, default_compiler, load_lock, sha256, verify_compiler
+from tools.generate_contracts import FIXTURE, generate_file
 
 
 MAGIC = bytes.fromhex("8b4753430d0a0000")
-SOURCE = Path("src/hbot/probe.gsc")
+SOURCE_DIRECTORY = Path("src/hbot")
 SCRIPT_NAME = "scripts/mp/hbot_probe.gsc"
 
 
@@ -30,8 +32,17 @@ def validate_gsc(data: bytes) -> None:
 def validate_inspection(text: str) -> None:
     required = [
         r"#namespace hbot_probe;",
+        r"// Namespace hbot_probe / hbot_probe",
         r"function autoexec __init__system__\(\)",
         r"function observe_match\(\)",
+        r"#namespace hbot_memory;",
+        r"#namespace hbot_mode;",
+        r"#namespace hbot_perception;",
+        r"#namespace hbot_contracts;",
+        r"hbot_mode::supports_tdm\(",
+        r"hbot_memory::record_visible\(",
+        r'getdvarint\( @"hbot_memory_enabled", 0 \)',
+        r'getdvarint\( @"hbot_memory_selftest", 0 \)',
         r'getdvarint\( @"hbot_probe_enabled", 0 \)',
         r'level endon\( "game_ended" \)',
         r"// dev strs \.\. 0\s",
@@ -62,12 +73,18 @@ def run(executable: Path, arguments: list[str]) -> str:
     return text
 
 
-def compile_once(executable: Path, output: Path) -> str:
+def compile_once(executable: Path, output: Path, generated: Path) -> str:
     return run(executable, [
         "gscc", "--game", "mwiii", "--platform", "pc", "--detour", "none",
-        "--name", SCRIPT_NAME, "--output", output.relative_to(ROOT).as_posix(),
-        SOURCE.as_posix(),
+        "--name", SCRIPT_NAME, "--namespace", "hbot_probe", "--output", output.relative_to(ROOT).as_posix(),
+        SOURCE_DIRECTORY.as_posix(), generated.relative_to(ROOT).as_posix(),
     ])
+
+
+def validate_memory_source(source: str) -> None:
+    code = re.sub(r"//[^\n]*", "", source)
+    if re.search(r"\b(?:level|self|gettime|geteye|getplayerangles|sighttracepassed|isplayer|isbot|getentitynumber)\b", code):
+        raise ValueError("Memory domain must not read runtime entities or engine state")
 
 
 def git_value(*arguments: str) -> str:
@@ -82,15 +99,19 @@ def build(executable: Path) -> dict:
     build_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="probe-", dir=build_root) as stage_name:
         stage = Path(stage_name)
+        generated = stage / "contracts.gsc"
+        generated_source = generate_file(ROOT, generated)
+        sources = sorted((ROOT / SOURCE_DIRECTORY).glob("*.gsc"))
+        validate_memory_source((ROOT / SOURCE_DIRECTORY / "memory.gsc").read_text(encoding="utf-8"))
         first = stage / "first" / "hbot_probe"
         second = stage / "second" / "hbot_probe"
-        logs = compile_once(executable, first) + compile_once(executable, second)
+        logs = compile_once(executable, first, generated) + compile_once(executable, second, generated)
         artifact = first.with_suffix(".gscc")
         validate_gsc(artifact.read_bytes())
         if sha256(artifact) != sha256(second.with_suffix(".gscc")):
             raise ValueError("Repeated compilation produced different bytecode")
         dictionary = stage / "names.txt"
-        source = (ROOT / SOURCE).read_text(encoding="utf-8")
+        source = "\n".join(p.read_text(encoding="utf-8") for p in sources) + "\n" + generated_source
         names = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", source))
         names.add(SCRIPT_NAME)
         dictionary.write_text("\n".join(sorted(names)) + "\n", encoding="utf-8")
@@ -103,15 +124,20 @@ def build(executable: Path) -> dict:
         inspected = inspect_dir / "hbot_probe.gsc"
         inspection = inspected.read_text(encoding="utf-8")
         validate_inspection(inspection)
+        inputs = {p.relative_to(ROOT).as_posix(): sha256(p) for p in sources}
+        inputs[FIXTURE.as_posix()] = sha256(ROOT / FIXTURE)
+        inputs["tools/generate_contracts.py"] = sha256(ROOT / "tools/generate_contracts.py")
+        source_digest = hashlib.sha256(json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         manifest = {
             "schema_version": 1,
             "source_commit": git_value("rev-parse", "HEAD"),
             "working_tree_dirty": bool(git_value("status", "--porcelain")),
-            "source_sha256": sha256(ROOT / SOURCE),
+            "source_sha256": source_digest,
+            "source_inputs": inputs,
             "toolchain_version": load_lock()["version"],
             "toolchain_lock_sha256": sha256(ROOT / "toolchain.lock.json"),
             "repeated_build_identical": True,
-            "validation": {"compile": "pass", "inspection": "pass", "game_load": "not_run", "behavior": "not_run"},
+            "validation": {"compile": "pass", "inspection": "pass", "native_memory_contracts": "not_run", "game_load": "not_run", "behavior": "not_run"},
             "artifacts": [{
                 "path": "hbot_probe.gscc",
                 "install_path": "jupiter/Assets/Scripts/mp/hbot_probe.gscc",
