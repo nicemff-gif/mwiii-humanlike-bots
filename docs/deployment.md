@@ -41,6 +41,18 @@ python -m tools.deploy rollback --game-root "<game directory>" --receipt "<recei
 
 ## 游戏实测
 
-安装成功只证明磁盘文件已部署。探针仍默认关闭；是否允许加载由 LUMEN 和本地脚本管理设置决定。启用前须将 `hbot_probe_enabled 1` 在地图初始化前设置，并按实验协议验证输出与生命周期。
+安装成功只证明磁盘文件已部署。普通 observer 包默认关闭；是否允许加载由 LUMEN 和本地脚本管理设置决定。普通包启用前须将 `hbot_probe_enabled 1` 在地图初始化前设置，并按实验协议验证输出与生命周期。人工包的明确开启方式见下节。
 
 本工具不设置运行变量，不启动游戏、不安装驱动。加载与行为状态持续记录为 `not_run`，直到实际进入地图验证。
+
+## 人工测试包
+
+没有已确认的变量输入入口时，可显式构建并部署人工包：
+
+```console
+python -m tools.build --profile manual-test
+python -m tools.deploy plan --game-root "<game directory>" --manifest dist/manual-test/manifest.json
+python -m tools.deploy apply --game-root "<game directory>" --manifest dist/manual-test/manifest.json
+```
+
+预览和回执会标记 `build_profile=manual-test`、`diagnostics_default_enabled=true`；人工包在缺少同名显式运行变量时自动开启观察、自测和焦点诊断。其余部署约束不变。原来不含配置字段的清单按 observer 兼容；配置与开关标志不匹配则拒绝。回退使用这次安装的回执，恢复先前默认关闭的观察脚本。不要把人工测试包长期当成普通包使用。

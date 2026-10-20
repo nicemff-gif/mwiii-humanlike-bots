@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from tools.build import MAGIC, validate_gsc, validate_inspection, validate_memory_source, validate_diagnostics_source
+from tools.build import MAGIC, OPT_IN_FLAGS, profile_source, validate_gsc, validate_inspection, validate_memory_source, validate_diagnostics_source
 
 
 class GscArtifactBoundaryTests(unittest.TestCase):
@@ -70,6 +70,26 @@ class ProbeInspectionTests(unittest.TestCase):
         changed = self.baseline().replace('"hbot_debug_enabled", 0', '"hbot_debug_enabled", 1')
         with self.assertRaises(ValueError):
             validate_inspection(changed)
+
+    def test_manual_test_fallbacks_require_explicit_matching_profile(self):
+        original = self.baseline()
+        prepared = profile_source(original, "manual-test")
+        expected = original
+        for flag in OPT_IN_FLAGS:
+            expected = expected.replace(f'getdvarint( @"{flag}", 0 )', f'getdvarint( @"{flag}", 1 )')
+        self.assertEqual(prepared, expected)
+        self.assertEqual(profile_source(original, "observer"), original)
+        validate_inspection(prepared, "manual-test")
+        with self.assertRaises(ValueError):
+            validate_inspection(prepared)
+        with self.assertRaises(ValueError):
+            validate_inspection(original, "manual-test")
+
+    def test_profile_transform_rejects_drift_duplicates_and_unknown_profile(self):
+        original = self.baseline()
+        for source, profile in [(original, "unknown"), (original + original, "manual-test"), (original.replace('"hbot_probe_enabled", 0', '"hbot_probe_enabled", 1'), "manual-test")]:
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                profile_source(source, profile)
 
 
 if __name__ == "__main__":

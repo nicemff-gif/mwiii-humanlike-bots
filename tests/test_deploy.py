@@ -77,6 +77,29 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertFalse(self.state.exists())
 
+    def test_manual_profile_is_explicit_in_plan_and_receipt(self):
+        self.metadata.update(build_profile="manual-test", diagnostics_default_enabled=True)
+        self.write_manifest()
+        preview = deploy.plan(self.manifest, self.game)
+        self.assertEqual(preview["build_profile"], "manual-test")
+        self.assertIs(preview["diagnostics_default_enabled"], True)
+        result = self.apply()
+        receipt = json.loads(Path(result["receipt"]).read_text())
+        self.assertEqual(receipt["build_profile"], "manual-test")
+        self.assertIs(receipt["diagnostics_default_enabled"], True)
+        self.rollback(result)
+        self.assertFalse(self.target.exists())
+
+    def test_invalid_profile_cannot_silently_enable_diagnostics(self):
+        for profile, enabled in [("observer", True), ("manual-test", False), ("unknown", False), ("observer", 0)]:
+            with self.subTest(profile=profile, enabled=enabled):
+                self.metadata.update(build_profile=profile, diagnostics_default_enabled=enabled)
+                self.write_manifest()
+                with self.assertRaises(ValueError):
+                    self.apply()
+                self.assertFalse(self.target.exists())
+                self.assertFalse(self.state.exists())
+
     def test_first_install_and_rollback_preserve_other_files(self):
         guard = mock.Mock()
         result = self.apply(guard)

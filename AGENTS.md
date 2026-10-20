@@ -9,6 +9,7 @@
 - Do not import proprietary game files, third-party patch payloads, or decompiled source into this repository.
 - Never put a local game path, player identifier, credential, or private log in tracked files.
 - Default diagnostics and experimental behavior to opt-in.
+- The ordinary `observer` build keeps defaults off. Explicit `--profile manual-test` may enable observation/selftest/diagnostics in a temporary source copy only; mark this profile in the manifest and deployment receipt. It must never enable action control.
 
 ## Workflow
 
