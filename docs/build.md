@@ -15,6 +15,8 @@ python -m tools.build
 
 清单包含源码提交、工作区是否有改动、每个 GSC 源文件／场景／生成器／构建器的摘要、实际编译源码摘要、构建配置、整体输入摘要、工具链与产物摘要。`native_memory_contracts`、`game_load` 和 `behavior` 保持 `not_run`，直到单独记录游戏内结果。重复编译一致只证明本次环境下的字节码一致。
 
+决策观察模块加入后，构建另包含 15 个共享决策场景生成的 126 条 GSC 断言；`native_decision_contracts` 与 `shadow_decision` 分别记录原生断言和运行集成验证，均初始为 `not_run`。两种构建均检查决策模块不读取世界实体／实时位置，不写入目击，也不执行动作。细节见 [决策观察](shadow-decision.md)。
+
 ## 不依赖控制台的人工测试包
 
 ```console

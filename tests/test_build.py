@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from tools.build import MAGIC, OPT_IN_FLAGS, profile_source, validate_gsc, validate_inspection, validate_memory_source, validate_diagnostics_source
+from tools.build import MAGIC, OPT_IN_FLAGS, profile_source, validate_gsc, validate_inspection, validate_memory_source, validate_diagnostics_source, validate_decision_source
 
 
 class GscArtifactBoundaryTests(unittest.TestCase):
@@ -36,6 +36,7 @@ class ProbeInspectionTests(unittest.TestCase):
             "function observe_match()\ngetdvarint( @\"hbot_probe_enabled\", 0 )\n"
             "#namespace hbot_memory;\n#namespace hbot_mode;\n#namespace hbot_perception;\n#namespace hbot_contracts;\n"
             "#namespace hbot_diagnostics;\ngetdvarint( @\"hbot_debug_enabled\", 0 )\n"
+            "#namespace hbot_decision;\nfunction run_decision_contracts()\nhbot_decision::update(\n"
             "hbot_mode::supports_tdm(\nhbot_memory::record_visible(\n"
             "getdvarint( @\"hbot_memory_enabled\", 0 )\ngetdvarint( @\"hbot_memory_selftest\", 0 )\n"
             "level endon( \"game_ended\" );\n// dev strs .. 0   (offset: 0x100)\n"
@@ -90,6 +91,12 @@ class ProbeInspectionTests(unittest.TestCase):
         for source, profile in [(original, "unknown"), (original + original, "manual-test"), (original.replace('"hbot_probe_enabled", 0', '"hbot_probe_enabled", 1'), "manual-test")]:
             with self.subTest(profile=profile), self.assertRaises(ValueError):
                 profile_source(source, profile)
+
+    def test_decisions_cannot_access_world_geometry_entities_or_controls(self):
+        for read in ["level.players", "self.origin", "gettime()", "hbot_perception::sample_visible(a,b)", "hbot_memory::record_visible(m,i,p,t)", "botpressbutton(a)", "iprintln(x)"]:
+            with self.subTest(read=read), self.assertRaises(ValueError):
+                validate_decision_source(read)
+        validate_decision_source("contact = hbot_memory::recall(memory, id, now);")
 
 
 if __name__ == "__main__":

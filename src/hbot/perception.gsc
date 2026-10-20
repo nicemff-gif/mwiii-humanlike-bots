@@ -67,6 +67,8 @@ function clear_on_death( record )
     level endon( "game_ended" );
     self waittill( "death" );
     hbot_memory::clear( record.memory );
+    hbot_decision::reset( record.control );
+    record.pending_samples = [];
     record.active = 0;
 }
 
@@ -78,11 +80,14 @@ function scan_observer( observer, players, now_ms, diagnostics_enabled )
     {
         record = spawnstruct();
         record.entity = observer;
+        record.slot = key;
         record.team = observer.team;
         record.active = 1;
         record.cursor = 0;
         record.last_samples = [];
         record.memory = hbot_memory::create_memory( 4000, 16 );
+        record.control = hbot_decision::create_controller( 250, 3000, 2000 );
+        record.pending_samples = [];
         level.hbot_shadow_records[ key ] = record;
         observer notify( "hbot_shadow_life" );
         observer thread clear_on_death( record );
@@ -103,10 +108,13 @@ function scan_observer( observer, players, now_ms, diagnostics_enabled )
         }
         samples++;
         observation = sample_visible( observer, candidate );
+        sample = spawnstruct();
+        sample.target_id = candidate getentitynumber();
+        sample.at_ms = now_ms;
+        sample.visible = isdefined( observation );
+        record.pending_samples[ record.pending_samples.size ] = sample;
         if ( diagnostics_enabled )
         {
-            sample = spawnstruct();
-            sample.at_ms = now_ms;
             sample.result = "rejected";
             if ( isdefined( observation ) )
             {
@@ -124,13 +132,14 @@ function scan_observer( observer, players, now_ms, diagnostics_enabled )
 
 function cleanup_records()
 {
-    foreach ( key, record in level.hbot_shadow_records )
+    foreach ( record in level.hbot_shadow_records )
     {
         if ( isdefined( record ) && ( !record.active || !eligible_player( record.entity ) ) )
         {
             hbot_memory::clear( record.memory );
+            hbot_decision::reset( record.control );
             record.active = 0;
-            level.hbot_shadow_records[ key ] = undefined;
+            level.hbot_shadow_records[ record.slot ] = undefined;
         }
     }
 }

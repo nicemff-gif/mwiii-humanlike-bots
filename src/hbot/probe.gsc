@@ -70,6 +70,12 @@ function observe_match()
         {
             return;
         }
+        report = hbot_contracts::run_decision_contracts();
+        iprintln( "[HBOT] decision selftest passed=" + report.passed + " failed=" + report.failed + " first_failure=" + report.first_failure );
+        if ( report.failed > 0 )
+        {
+            return;
+        }
     }
     iprintln( "[HBOT] TDM observer active; behavior_control=0 memory=" + shadow_enabled );
     if ( diagnostics_enabled && !shadow_enabled )
@@ -125,6 +131,17 @@ function observe_match()
             observer_cursor = observer_cursor % observers.size;
             hbot_perception::scan_observer( observers[ observer_cursor ], level.players, now_ms, diagnostics_enabled );
             observer_cursor++;
+        }
+        if ( shadow_enabled )
+        {
+            foreach ( record in level.hbot_shadow_records )
+            {
+                if ( isdefined( record ) && record.active )
+                {
+                    record.intent = hbot_decision::update( record.control, record.memory, record.pending_samples, now_ms );
+                    record.pending_samples = [];
+                }
+            }
         }
         if ( now_ms >= next_report )
         {

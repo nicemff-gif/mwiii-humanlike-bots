@@ -11,6 +11,7 @@ import tempfile
 
 from tools.toolchain import ROOT, default_compiler, load_lock, sha256, verify_compiler
 from tools.generate_contracts import FIXTURE, generate_file
+from tools.generate_decision_contracts import FIXTURE as DECISION_FIXTURE, generate as generate_decision
 
 
 MAGIC = bytes.fromhex("8b4753430d0a0000")
@@ -44,6 +45,9 @@ def validate_inspection(text: str, profile: str = "observer") -> None:
         r"#namespace hbot_perception;",
         r"#namespace hbot_contracts;",
         r"#namespace hbot_diagnostics;",
+        r"#namespace hbot_decision;",
+        r"function run_decision_contracts\(\)",
+        r"hbot_decision::update\(",
         r"hbot_mode::supports_tdm\(",
         r"hbot_memory::record_visible\(",
         r'level endon\( "game_ended" \)',
@@ -110,6 +114,13 @@ def validate_diagnostics_source(source: str) -> None:
         raise ValueError("Diagnostics must not read world positions, resample, or write observations")
 
 
+def validate_decision_source(source: str) -> None:
+    validate_memory_source(source)
+    code = re.sub(r"//[^\n]*", "", source)
+    if re.search(r"\b(?:origin|hbot_perception|hbot_diagnostics|record_visible|iprintln|botpressbutton|botsetscriptgoal|botsetscriptenemy)\b", code):
+        raise ValueError("Decision policy may only consume filtered memory and evidence, without actuation")
+
+
 def git_value(*arguments: str) -> str:
     return subprocess.check_output(
         ["git", *arguments], cwd=ROOT, text=True, encoding="utf-8",
@@ -126,6 +137,8 @@ def build(executable: Path, profile: str = "observer") -> dict:
         stage = Path(stage_name)
         generated = stage / "contracts.gsc"
         generated_source = generate_file(ROOT, generated)
+        generated_source += "\n" + generate_decision(json.loads((ROOT / DECISION_FIXTURE).read_text(encoding="utf-8")))
+        generated.write_text(generated_source, encoding="utf-8")
         sources = sorted((ROOT / SOURCE_DIRECTORY).glob("*.gsc"))
         staged_sources = stage / "sources"
         staged_sources.mkdir()
@@ -138,6 +151,7 @@ def build(executable: Path, profile: str = "observer") -> dict:
             compiled_inputs[path.relative_to(ROOT).as_posix()] = hashlib.sha256(data).hexdigest()
         validate_memory_source((ROOT / SOURCE_DIRECTORY / "memory.gsc").read_text(encoding="utf-8"))
         validate_diagnostics_source((ROOT / SOURCE_DIRECTORY / "diagnostics.gsc").read_text(encoding="utf-8"))
+        validate_decision_source((ROOT / SOURCE_DIRECTORY / "decision.gsc").read_text(encoding="utf-8"))
         first = stage / "first" / "hbot_probe"
         second = stage / "second" / "hbot_probe"
         logs = compile_once(executable, first, generated, staged_sources) + compile_once(executable, second, generated, staged_sources)
@@ -161,7 +175,9 @@ def build(executable: Path, profile: str = "observer") -> dict:
         validate_inspection(inspection, profile)
         inputs = {p.relative_to(ROOT).as_posix(): sha256(p) for p in sources}
         inputs[FIXTURE.as_posix()] = sha256(ROOT / FIXTURE)
+        inputs[DECISION_FIXTURE.as_posix()] = sha256(ROOT / DECISION_FIXTURE)
         inputs["tools/generate_contracts.py"] = sha256(ROOT / "tools/generate_contracts.py")
+        inputs["tools/generate_decision_contracts.py"] = sha256(ROOT / "tools/generate_decision_contracts.py")
         inputs["tools/build.py"] = sha256(ROOT / "tools/build.py")
         source_digest = hashlib.sha256(json.dumps({"profile": profile, "inputs": inputs, "compiled_inputs": compiled_inputs}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         manifest = {
@@ -176,7 +192,7 @@ def build(executable: Path, profile: str = "observer") -> dict:
             "toolchain_version": load_lock()["version"],
             "toolchain_lock_sha256": sha256(ROOT / "toolchain.lock.json"),
             "repeated_build_identical": True,
-            "validation": {"compile": "pass", "inspection": "pass", "native_memory_contracts": "not_run", "game_load": "not_run", "behavior": "not_run"},
+            "validation": {"compile": "pass", "inspection": "pass", "native_memory_contracts": "not_run", "native_decision_contracts": "not_run", "game_load": "not_run", "shadow_decision": "not_run", "behavior": "not_run"},
             "artifacts": [{
                 "path": "hbot_probe.gscc",
                 "install_path": "jupiter/Assets/Scripts/mp/hbot_probe.gscc",
