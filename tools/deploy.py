@@ -86,6 +86,9 @@ def load_artifact(manifest_path: Path) -> tuple[dict, bytes]:
         raise ValueError("Deployment requires a clean, reproducible build")
     if re.fullmatch(r"[0-9a-f]{40}", str(manifest.get("source_commit"))) is None:
         raise ValueError("Build manifest must identify its source commit")
+    profile = manifest.get("build_profile", "observer")
+    if profile not in ("observer", "manual-test") or manifest.get("diagnostics_default_enabled", False) is not (profile == "manual-test"):
+        raise ValueError("Build profile and diagnostic defaults do not match")
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list) or len(artifacts) != 1 or not isinstance(artifacts[0], dict):
         raise ValueError("This deployment tool accepts exactly one probe artifact")
@@ -162,6 +165,8 @@ def plan(manifest_path: Path, game_root: Path) -> dict:
         "original_sha256": digest(original),
         "artifact_sha256": digest(payload),
         "source_commit": manifest["source_commit"],
+        "build_profile": manifest.get("build_profile", "observer"),
+        "diagnostics_default_enabled": manifest.get("diagnostics_default_enabled", False),
         "game_process_check": "required_at_apply",
         "runtime_validation": "not_run",
     }
@@ -194,6 +199,8 @@ def apply(
             "game_root": str(root),
             "install_path": INSTALL_PATH,
             "source_commit": manifest["source_commit"],
+            "build_profile": manifest.get("build_profile", "observer"),
+            "diagnostics_default_enabled": manifest.get("diagnostics_default_enabled", False),
             "original_existed": original is not None,
             "original_sha256": digest(original),
             "artifact_sha256": digest(payload),

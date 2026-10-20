@@ -45,6 +45,7 @@ python -m tools.build
 - [开发流程](CONTRIBUTING.md)
 - [里程碑](docs/roadmap.md)
 - [实验协议](docs/testing.md)
+- [人工测试 01：操作步骤与反馈表](docs/manual-test-01.md)
 - [TDM 感知记忆与游戏内验证](docs/tdm-memory.md)
 - [研究来源与原安装仓库关系](docs/research/provenance.md)
 

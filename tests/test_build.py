@@ -1,7 +1,7 @@
 import struct
 import unittest
 
-from tools.build import MAGIC, validate_gsc, validate_inspection, validate_memory_source
+from tools.build import MAGIC, OPT_IN_FLAGS, profile_source, validate_gsc, validate_inspection, validate_memory_source, validate_diagnostics_source
 
 
 class GscArtifactBoundaryTests(unittest.TestCase):
@@ -35,6 +35,7 @@ class ProbeInspectionTests(unittest.TestCase):
             "#namespace hbot_probe;\n// Namespace hbot_probe / hbot_probe\nfunction autoexec __init__system__()\n"
             "function observe_match()\ngetdvarint( @\"hbot_probe_enabled\", 0 )\n"
             "#namespace hbot_memory;\n#namespace hbot_mode;\n#namespace hbot_perception;\n#namespace hbot_contracts;\n"
+            "#namespace hbot_diagnostics;\ngetdvarint( @\"hbot_debug_enabled\", 0 )\n"
             "hbot_mode::supports_tdm(\nhbot_memory::record_visible(\n"
             "getdvarint( @\"hbot_memory_enabled\", 0 )\ngetdvarint( @\"hbot_memory_selftest\", 0 )\n"
             "level endon( \"game_ended\" );\n// dev strs .. 0   (offset: 0x100)\n"
@@ -58,6 +59,37 @@ class ProbeInspectionTests(unittest.TestCase):
             with self.subTest(read=read), self.assertRaises(ValueError):
                 validate_memory_source(read)
         validate_memory_source("// level state is intentionally absent\n contact = spawnstruct();")
+
+    def test_diagnostics_cannot_export_hidden_positions_or_resample(self):
+        for read in ["target.origin", "target geteye()", "sample_visible(a,b)", "record_visible(a,b,c,d)", "sighttracepassed(a,b,0,c)"]:
+            with self.subTest(read=read), self.assertRaises(ValueError):
+                validate_diagnostics_source(read)
+        validate_diagnostics_source("// origin is deliberately absent\ncontact = hbot_memory::recall(memory, id, now);")
+
+    def test_default_enabled_diagnostics_fails_gate(self):
+        changed = self.baseline().replace('"hbot_debug_enabled", 0', '"hbot_debug_enabled", 1')
+        with self.assertRaises(ValueError):
+            validate_inspection(changed)
+
+    def test_manual_test_fallbacks_require_explicit_matching_profile(self):
+        original = self.baseline()
+        prepared = profile_source(original, "manual-test")
+        expected = original
+        for flag in OPT_IN_FLAGS:
+            expected = expected.replace(f'getdvarint( @"{flag}", 0 )', f'getdvarint( @"{flag}", 1 )')
+        self.assertEqual(prepared, expected)
+        self.assertEqual(profile_source(original, "observer"), original)
+        validate_inspection(prepared, "manual-test")
+        with self.assertRaises(ValueError):
+            validate_inspection(prepared)
+        with self.assertRaises(ValueError):
+            validate_inspection(original, "manual-test")
+
+    def test_profile_transform_rejects_drift_duplicates_and_unknown_profile(self):
+        original = self.baseline()
+        for source, profile in [(original, "unknown"), (original + original, "manual-test"), (original.replace('"hbot_probe_enabled", 0', '"hbot_probe_enabled", 1'), "manual-test")]:
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                profile_source(source, profile)
 
 
 if __name__ == "__main__":
