@@ -17,7 +17,8 @@ class DeploymentTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="hbot-deploy-test-")
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
+        # GitHub Windows runners may expose TEMP through an 8.3 path alias.
+        self.root = Path(self.temporary.name).resolve()
         self.game = self.root / "game"
         self.target = self.game / deploy.INSTALL_PATH
         self.target.parent.mkdir(parents=True)
@@ -186,7 +187,7 @@ class DeploymentTests(unittest.TestCase):
         real_replace = os.replace
 
         def fail_target(source, destination):
-            if Path(destination) == self.target:
+            if Path(destination).resolve() == self.target.resolve():
                 raise OSError("simulated disk failure")
             return real_replace(source, destination)
 
