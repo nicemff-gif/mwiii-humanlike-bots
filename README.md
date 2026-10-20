@@ -36,6 +36,8 @@ python -m tools.build
 
 输出位于 `dist/`，构建不部署或启动游戏。[工具链与探针说明](docs/build.md) 列出开关和待实测项目。
 
+需要部署时，先用 `python -m tools.deploy plan --game-root "<game directory>"` 预览，再按 [部署与回退说明](docs/deployment.md) 操作。安装保留本地备份与回执，游戏内验证单独记录。
+
 ## 文档
 
 - [需求与完成标准](docs/requirements.md)
