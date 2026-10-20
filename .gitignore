@@ -1,0 +1,41 @@
+# Local compiler and generated outputs
+.tools/
+build/
+dist/
+artifacts/
+*.gscc
+*.gscasm
+*.gscgdb
+*.exe
+*.dll
+*.sys
+*.ff
+*.fp
+*.xpak
+*.xsub
+*.zip
+*.7z
+*.rar
+
+# Local game location, player state, and research material
+.local/
+references/private/
+*.local.json
+*.local.toml
+.env
+.env.*
+!.env.example
+settings.json
+script_manager.json
+*.log
+*.dmp
+*.mdmp
+
+# Python and editor output
+__pycache__/
+*.py[cod]
+.venv/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

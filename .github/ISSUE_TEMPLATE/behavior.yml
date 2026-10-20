@@ -1,0 +1,24 @@
+name: Behavior / 人机行为
+description: 报告场景、预期和验收条件
+title: "[Behavior] "
+labels: [behavior]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 场景与复现步骤
+      description: 地图、模式、人数、版本、启用脚本和运行参数；请移除个人信息。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期与实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 可观察的验收条件
+    validations:
+      required: true
