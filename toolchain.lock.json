@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "Atian Tools",
+  "version": "3.3.0",
+  "game": "mwiii",
+  "platform": "pc",
+  "random_seed": 20261020,
+  "archive_url": "https://github.com/ate47/atian-cod-tools/releases/download/3.3.0/acts.zip",
+  "archive_sha256": "164d9ed7a0ec16428dacdbf14d683ab05230af0975cd9f126478b5d086fe3dd4",
+  "verified_files": {
+    "acts.exe": "d6db380930717a5d434a68c84155f152fb44efe87e9a59e133299b3bd978b4cf",
+    "acts-common.dll": "9ef008d3c89f8e786f20ad842f40d16e5c1175b95d4933a4a13927b2dc4b67cc"
+  },
+  "upstream_license": "https://github.com/ate47/atian-cod-tools/blob/3.3.0/LICENSE.md"
+}
