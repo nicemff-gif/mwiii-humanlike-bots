@@ -3,6 +3,8 @@
 ## Product and repository scope
 
 - Build original GSC behavior for locally hosted custom matches on MWIII.
+- The first supported scope is normal small-team TDM, native mode `war`, team-based, at most 12 connected entries. Unknown modes and larger lobbies must fail closed.
+- Perception and memory currently run only in shadow mode. Do not claim bot behavior changes or runtime validation from reference-model tests.
 - Keep runtime adapters separate from perception, memory, decision, and action ownership.
 - Do not import proprietary game files, third-party patch payloads, or decompiled source into this repository.
 - Never put a local game path, player identifier, credential, or private log in tracked files.
